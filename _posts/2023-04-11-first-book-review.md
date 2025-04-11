@@ -2,6 +2,7 @@
 ### 激変する世界で君だけの未来をつくる4つのルール
 
 ---
+![image](https://github.com/user-attachments/assets/42a6cb78-9ad8-47e6-ac24-3f0d17122ff8)
 
 ## 概要
 
