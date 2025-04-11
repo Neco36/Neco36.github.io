@@ -1,0 +1,27 @@
+# サイト設定
+title: Books
+description: 読書記録ブログ
+author: あなたの名前
+
+# ビルド設定
+markdown: kramdown
+permalink: /:year/:month/:day/:title/
+timezone: Asia/Tokyo
+
+# テーマ設定（GitHub Pagesで利用可能なテーマを選択）
+theme: minima
+
+# コレクション設定
+collections:
+  books:
+    output: true
+    permalink: /books/:path/
+
+# デフォルト設定
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+      author: あなたの名前
