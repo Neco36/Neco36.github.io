@@ -1,9 +1,10 @@
 // 形態素解析（kuromoji.js）でふりがなを付ける。
-// 辞書は初回だけ CDN から読み込み（約 12MB）、その後は Service Worker がキャッシュする。
+// プログラムは CDN から、辞書（約 18MB）はページと一緒に公開した dict/ から読み込む。
 
 import { hasKanji, isKanjiChar, toHiragana } from './kana.js';
 
-const KUROMOJI_BASE = 'https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/';
+const KUROMOJI_SRC = 'https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/build/kuromoji.js';
+const DICT_PATH = 'dict/';
 
 let tokenizer = null;
 let loading = null;
@@ -30,15 +31,9 @@ function loadScript(src) {
 export function init() {
   if (loading) return loading;
   loading = (async () => {
-    // kuromoji はブラウザ版で辞書 URL の "https://" を "https:/" に潰してしまうので直す
-    const origOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-      if (typeof url === 'string') url = url.replace(/^https:\/(?!\/)/, 'https://');
-      return origOpen.call(this, method, url, ...rest);
-    };
-    await loadScript(KUROMOJI_BASE + 'build/kuromoji.js');
+    if (!window.kuromoji) await loadScript(KUROMOJI_SRC);
     tokenizer = await new Promise((resolve, reject) => {
-      window.kuromoji.builder({ dicPath: KUROMOJI_BASE + 'dict/' }).build((err, t) => (err ? reject(err) : resolve(t)));
+      window.kuromoji.builder({ dicPath: DICT_PATH }).build((err, t) => (err ? reject(err) : resolve(t)));
     });
     listeners.forEach((fn) => fn());
     return tokenizer;

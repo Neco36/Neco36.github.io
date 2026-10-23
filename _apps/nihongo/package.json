@@ -1,0 +1,12 @@
+{
+  "name": "nihongo-check",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "kuromoji": "0.1.2"
+  }
+}
