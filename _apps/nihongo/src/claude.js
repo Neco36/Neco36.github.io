@@ -83,12 +83,11 @@ JSON だけを返す。ほかの文は書かない。形は次のとおり（値
   "overall": "自然な会話です。友達にはもう少しくだけた言い方でいいです。"
 }`;
 
-function buildPrompt({ transcript, relationship, draft, imageCount }) {
+function buildPrompt({ transcript, relationship, imageCount }) {
   let text = `${INSTRUCTIONS}\n\n## 今回の入力\n相手との関係: ${relationship}\n`;
   if (transcript && transcript.length) {
     text += '\n会話（テキスト）:\n' + transcript.map((m) => `${m.speaker === 'self' ? 'self' : 'other'}: ${m.text}`).join('\n') + '\n';
   }
-  if (draft) text += '\n最後の self の発言は、まだ送っていない下書きです。送る前に直したいので、特にていねいに見てください。\n';
   if (imageCount) text += `\n画像は LINE のスクリーンショット ${imageCount} 枚です。上から順に会話が続いています。\n`;
   return text;
 }
@@ -138,17 +137,17 @@ const ERROR_TEXT = {
   rate_limited: 'Claude の使える回数の上限に達しました。少し時間をおいてからためしてください。',
   session_expired: 'claude.ai にもう一度ログインしてください。',
   image_rejected: 'この画像は読めませんでした。別のスクショでためしてください。',
-  images_unavailable: 'この画面では画像を送れません。「送る前の下書き」で文字を入れてためしてください。',
+  images_unavailable: 'この画面ではスクショを送れません。claude.ai のアプリかブラウザで開いてください。',
   refused: 'この内容はチェックできませんでした。別のスクショでためしてください。',
   empty_completion: '答えが返ってきませんでした。スクショを減らしてためしてください。',
   invalid_json: '答えの形がおかしかったので読めませんでした。もう一度ためしてください。',
   prompt_too_large: '会話が長すぎます。短くしてためしてください。',
 };
 
-export async function analyze({ images, transcript, relationship, draft, signal, onProgress }) {
+export async function analyze({ images, transcript, relationship, signal, onProgress }) {
   const sample = await getSample();
   if (!sample) throw new ClaudeError('チェックは claude.ai の中で開いたときだけ使えます。');
-  const prompt = buildPrompt({ transcript, relationship, draft, imageCount: images ? images.length : 0 });
+  const prompt = buildPrompt({ transcript, relationship, imageCount: images ? images.length : 0 });
   const options = { model: MODEL, modelTier: 'quick', signal, onText: ({ text }) => onProgress && onProgress(text.length) };
   if (images && images.length) options.images = images;
   try {

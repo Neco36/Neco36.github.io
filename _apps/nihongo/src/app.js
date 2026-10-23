@@ -23,7 +23,7 @@ const state = {
   route: { tab: TABS.includes(initialTab) ? initialTab : 'check', sub: '' },
   ready: false,
   check: {
-    mode: 'screenshot', images: [], relationship: '友達', draftContext: '', draftText: '',
+    images: [], relationship: '友達',
     loading: false, progress: 0, ctl: null, error: null, resultId: null,
     available: null, maxImages: 0,
   },
@@ -168,19 +168,13 @@ function relationshipSelect(value, attr, id) {
 function renderCheck() {
   const c = state.check;
   const result = c.resultId ? store.history.find((h) => h.id === c.resultId) : null;
-  const canImages = c.maxImages > 0;
-  const unavailable = c.available === false;
-  const mode = canImages ? c.mode : 'draft';
+  const unavailable = c.available === false || (c.available && c.maxImages === 0);
   return `
-    ${unavailable ? `<div class="notice">${f('チェックは claude.ai の中でこのページを開いたときだけ使えます。漢字の練習とノートはこのまま使えます。')}</div>` : ''}
-    <div class="segmented" role="group">
-      <button data-action="check-mode" data-mode="screenshot" aria-pressed="${mode === 'screenshot'}" ${canImages ? '' : 'disabled'}>${f('スクショ')}</button>
-      <button data-action="check-mode" data-mode="draft" aria-pressed="${mode === 'draft'}">${f('送る前の下書き')}</button>
-    </div>
+    ${c.available === false ? `<div class="notice">${f('チェックは claude.ai の中でこのページを開いたときだけ使えます。漢字の練習とノートはこのまま使えます。')}</div>` : ''}
+    ${c.available && c.maxImages === 0 ? `<div class="notice">${f('この画面ではスクショを送れません。claude.ai のアプリかブラウザで開いてください。')}</div>` : ''}
     <label class="field" for="rel">${f('相手との関係')}
       ${relationshipSelect(c.relationship, 'data-bind="relationship"', 'rel')}
     </label>
-    ${mode === 'screenshot' ? `
       <label class="drop">
         <input type="file" id="pick" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-action="pick-images" hidden>
         <span class="drop-icon" aria-hidden="true">＋</span>
@@ -189,14 +183,6 @@ function renderCheck() {
       ${c.images.length ? `<div class="thumbs">${c.images.map((im) => `
         <div class="thumb"><img src="${im.preview}" alt=""><button class="thumb-x" data-action="remove-image" data-id="${im.id}" aria-label="${esc('消す')}">×</button></div>`).join('')}</div>` : ''}
       <p class="hint">${f('画像は保存しません。保存するのは読み取った文字だけです。')}</p>
-    ` : `
-      <label class="field" for="ctx">${f('相手のメッセージ（なくてもいい）')}
-        <textarea id="ctx" rows="2" data-bind="draftContext" placeholder="${esc('例：明日ひま？')}">${esc(c.draftContext)}</textarea>
-      </label>
-      <label class="field" for="draft">${f('あなたの返信（下書き）')}
-        <textarea id="draft" rows="3" data-bind="draftText" placeholder="${esc('例：明日は行けるかどうか分からないです')}">${esc(c.draftText)}</textarea>
-      </label>
-    `}
     ${c.loading ? `
       <div class="loading-row">
         <span class="spinner" aria-hidden="true"></span>
@@ -710,7 +696,6 @@ function updateEntry(entry) {
 
 const actions = {
   nav: (el) => go(el.dataset.to),
-  'check-mode': (el) => { state.check.mode = el.dataset.mode; render(); },
   'remove-image': (el) => {
     const im = state.check.images.find((x) => x.id === el.dataset.id);
     if (im) URL.revokeObjectURL(im.preview);
@@ -719,17 +704,8 @@ const actions = {
   },
   'run-check': () => {
     const c = state.check;
-    const mode = c.maxImages > 0 ? c.mode : 'draft';
-    if (mode === 'screenshot') {
-      if (!c.images.length) { c.error = 'スクショを選んでください。'; render(); return; }
-      runCheck({ source: 'screenshot', relationship: c.relationship, request: { images: c.images.map((im) => im.blob) } });
-    } else {
-      if (!c.draftText.trim()) { c.error = '返信の下書きを入力してください。'; render(); return; }
-      const transcript = [];
-      if (c.draftContext.trim()) transcript.push({ speaker: 'other', text: c.draftContext.trim() });
-      transcript.push({ speaker: 'self', text: c.draftText.trim() });
-      runCheck({ source: 'draft', relationship: c.relationship, request: { transcript, draft: true } });
-    }
+    if (!c.images.length) { c.error = 'スクショを選んでください。'; render(); return; }
+    runCheck({ source: 'screenshot', relationship: c.relationship, request: { images: c.images.map((im) => im.blob) } });
   },
   'stop-check': () => { if (state.check.ctl) state.check.ctl.abort(); },
   'flip-speaker': (el) => {
@@ -870,7 +846,6 @@ function onBind(e) {
   // 日本語入力の変換中に描き直すと入力がこわれるので、確定を待つ
   if (e.isComposing) return;
   if (key === 'relationship') state.check.relationship = e.target.value;
-  else if (key === 'draftContext' || key === 'draftText') state.check[key] = e.target.value;
   else if (key === 'editText') { if (state.editing) state.editing.text = e.target.value; }
   else if (key === 'quizFilter') state.quizFilter = e.target.value;
   else if (key === 'wordSearch') { state.wordSearch = e.target.value; render(); }
